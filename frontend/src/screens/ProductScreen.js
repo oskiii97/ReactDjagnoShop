@@ -1,26 +1,32 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Row, Col, Image, ListGroup, Button, Card, Form } from 'react-bootstrap'
-import axios from 'axios'
+import { useDispatch, useSelector } from 'react-redux'
+import { listProductDetails } from '../actions/productActions'
+import Loader from '../components/Loader'
+import Message from '../components/Message'
 
 
-function ProductScreen({ match }) {
-    const product_id = useParams();
-    const [product, setProduct] = useState([])
+
+function ProductScreen() {
+    const match = useParams()
+    const dispatch = useDispatch()
+    const productDetails = useSelector(state => state.productDetails)
+    const {loading, error, product } = productDetails
 
     useEffect(() => {
-        async function fetchProduct() {
-            const { data } = await axios.get(`/api/products/${match.params.id}`)
-            setProduct(data)
-        } fetchProduct()
-    }, [])
-    
- 
+        dispatch(listProductDetails(match.id))
+    }, [dispatch, match])
+
     
     return (
         <div>
-            <Link to='/' className='btn btn-light my-3'>Go Back</Link>
-           
+            <Link to='/' className='btn btn-light my-3'>Powrót</Link>
+            {loading ?
+                <Loader />
+                : error
+                    ? <Message variant='danger'>{error}</Message>
+                    : (
                         <div>
                             <Row>
                                 <Col md={6}>
@@ -34,13 +40,12 @@ function ProductScreen({ match }) {
                                             <h3>{product.nazwa_prod}</h3>
                                         </ListGroup.Item>
 
-                                 
                                         <ListGroup.Item>
-                                            Price: ${product.cena}
+                                            Cena: ${product.cena}
                                         </ListGroup.Item>
 
                                         <ListGroup.Item>
-                                            Description: {product.opis_prod}
+                                            Opis: {product.opis_prod}
                                         </ListGroup.Item>
                                     </ListGroup>
                                 </Col>
@@ -59,32 +64,24 @@ function ProductScreen({ match }) {
                                             </ListGroup.Item>
                                             <ListGroup.Item>
                                                 <Row>
-                                                    <Col>Status:</Col>
+                                                    <Col>Dostepnosc:</Col>
                                                     <Col>
-                                                        {product.liczba_dost > 0 ? 'In Stock' : 'Out of Stock'}
+                                                        {product.liczba_dost > 0 ? 'W magazynie' : 'Brak na magazynie'}
                                                     </Col>
                                                 </Row>
                                             </ListGroup.Item>
-
-                                           
-                                            )}
-
-
-                                            
                                         </ListGroup>
                                     </Card>
                                 </Col>
                             </Row>
-
-                            
                         </div>
+                            )
+
+            }
+
+
+                        </div >
                     )
-
-            
-
-
-        </div >
-    )
-}
+            }
 
 export default ProductScreen
