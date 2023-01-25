@@ -13,4 +13,8 @@ urlpatterns = [
 	
 	path('products/', views.getProducts, name='products'),
 	path('products/<str:pk>/', views.getProduct, name='product'),
+
+	 
+    path('add/', views.addOrderItems, name='orders-add'),
+    path('<str:pk>/', views.getOrderById, name='user-order'),
 ]

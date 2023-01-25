@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.contrib.auth.models import User 
+from base.models import Produkt, Zamowienie, ZamowionyProdukt, AdresWysylki
 
 from django.contrib.auth.hashers import make_password
 
@@ -90,6 +91,82 @@ def getProduct(request, pk):
 	product = Produkt.objects.get(_id=pk)
 	serializer = ProductSerializer(product, many=False)
 	return Response(serializer.data)
+
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def addOrderItems(request):
+    user = request.user
+    data = request.data
+
+    orderItems = data['orderItems']
+
+    if orderItems and len(orderItems) == 0:
+        return Response({'detail': 'No Order Items'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+
+        # Tworzenie zamownienia
+
+        order = Zamowienie.objects.create(
+            user=user,
+            sposob_platnosc=data['paymentMethod'],
+            cena_podatku=data['taxPrice'],
+            koszt_wysylki=data['shippingPrice'],
+            sum_cena=data['totalPrice']
+        )
+
+        # Tworzenie adresu wysylki 
+
+        shipping = AdresWysylki.objects.create(
+            order=order,
+            adres=data['shippingAddress']['address'],
+            miasto=data['shippingAddress']['city'],
+            kod_pocztowy=data['shippingAddress']['postalCode'],
+            kraj=data['shippingAddress']['country'],
+        )
+
+        # Utworzenie zamowienia i polacznie jego zamowionym produktem
+        for i in orderItems:
+            product = Product.objects.get(_id=i['product'])
+
+            item = ZamowionyProdukt.objects.create(
+                product=Produkt,
+                order=Zamowienie,
+                name=Produkt.nazwa_prod,
+                qty=i['qty'],
+                price=i['price'],
+                image=product.image.url,
+            )
+
+            # Update magazynu
+
+            product.countInStock -= item.qty
+            product.save()
+
+        serializer = OrderSerializer(order, many=False)
+        return Response(serializer.data)
+        
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getOrderById(request, pk):
+
+    user = request.user
+
+    try:
+        order = Order.objects.get(_id=pk)
+        if user.is_staff or order.user == user:
+            serializer = OrderSerializer(order, many=False)
+            return Response(serializer.data)
+        else:
+            Response({'detail': 'Not authorized to view this order'},
+                     status=status.HTTP_400_BAD_REQUEST)
+    except:
+        return Response({'detail': 'Order does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 
 
